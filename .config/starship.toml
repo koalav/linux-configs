@@ -1,0 +1,16 @@
+# 줄바꿈 설정 (프롬프트를 두 줄로 사용)
+add_newline = true
+
+# [character] 섹션: 입력 대기 아이콘 커스텀
+[character]
+success_symbol = "[➜](bold green)"
+error_symbol = "[➜](bold red)"
+
+# [directory] 섹션: 경로 표시 단축
+[directory]
+truncation_length = 3
+truncate_to_repo = true
+
+# [git_branch] 섹션: Git 아이콘 설정
+[git_branch]
+symbol = " "
