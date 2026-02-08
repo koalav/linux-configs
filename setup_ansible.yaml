@@ -22,6 +22,7 @@
       }}
 
     # Cargo tools creates 정확화 (name != binary 인 경우 반영)
+    cargo_tools:
       - { name: "du-dust", bin: "dust" }
       - { name: "eza", bin: "eza" }
       - { name: "zoxide", bin: "zoxide" }
@@ -31,6 +32,7 @@
       - { name: "starship", bin: "starship" }
       - { name: "bat", bin: "batcat" }
       - { name: "difftastic", bin: "difft" }
+      - { name: "ripgrep", bin: "rg" }
 
   tasks:
     # -------------------------------------------------------
@@ -45,7 +47,7 @@
           - unzip
           - tar
           - build-essential
-          - software-properties-common
+          #          - software-properties-common
           - taskwarrior
           - shellcheck
           - asciinema
@@ -92,11 +94,11 @@
         content: |
           deb [signed-by=/etc/apt/keyrings/charm.gpg] https://repo.charm.sh/apt/ * *
 
-    - name: Install glow
-      ansible.builtin.apt:
-        name: glow
-        state: present
-        update_cache: yes
+    #- name: Install glow
+    #  ansible.builtin.apt:
+    #    name: glow
+    #    state: present
+    #    update_cache: yes
 
     # -------------------------------------------------------
     # 2. Rust (Cargo)
@@ -132,6 +134,11 @@
         return_content: true
         headers: "{{ github_headers }}"
       register: neovim_release
+    # - debug: msg="tag={{ neovim_release.content }}"
+
+    #    - name: Parse neovim release JSOn safely
+    #      ansible.builtin.set_fact:
+    #        neovim_release_obj: "{{ neovim_release.content | from_json }}"
 
     - name: Set Neovim variables (arch mapping)
       ansible.builtin.set_fact:
@@ -165,6 +172,15 @@
             state: link
             force: true
       when: neovim_arch != "unsupported"
+
+    # [Zellij]
+    - name: Download and Install Zellij
+      tags: [zellij]
+      unarchive:
+        src: "https://github.com/zellij-org/zellij/releases/download/v{{ zellij_ver }}/zellij-{{ neovim_arch }}-unknown-linux-musl.tar.gz"
+        dest: /usr/local/bin
+        remote_src: yes
+        mode: "0755"
 
     # -------------------------------------------------------
     # 5. LazyGit 설치 (GitHub API + GITHUB_TOKEN + ARM 매핑)
@@ -237,7 +253,7 @@
 
     - name: Install Lazyssh
       unarchive:
-        src: "https://github.com/Adembc/lazyssh/releases/download/{{ lazyssh_json.json.tag_name }}/lazyssh_{{ lazyssh_json.json.tag_name | regex_replace('^v','') }}_Linux_{{ 'x86_64' if ansible_facts.architecture in ['x86_64', 'amd64'] else 'arm64' }}.tar.gz"
+        src: "https://github.com/Adembc/lazyssh/releases/download/{{ lazyssh_json.json.tag_name }}/lazyssh_Linux_{{ 'x86_64' if ansible_facts.architecture in ['x86_64', 'amd64'] else 'arm64' }}.tar.gz"
         dest: /usr/local/bin
         remote_src: yes
         include: ["lazyssh"]
@@ -268,7 +284,7 @@
 
     - name: Install Python tools via uv
       ansible.builtin.shell: "{{ user_home }}/.local/bin/uv tool install {{ item }}"
-      loop: [posting, mitmproxy, thefuck, httpie]
+      loop: [posting, mitmproxy, httpie]
       become_user: "{{ user_id }}"
       ignore_errors: yes
 
@@ -282,13 +298,15 @@
       args:
         creates: "{{ user_home }}/.cargo/bin/{{ item.bin }}"
 
-    # Yazi Install
-    - name: Install Yazi via Cargo
-      shell: "{{ user_home }}/.cargo/bin/cargo install --locked yazi-fm yazi-cli"
-      become_user: "{{ user_id }}"
+    - name: Install/Update Yazi via yazi-build (crates.io)
+      tags: [yazi]
+      become: false
+      shell: |
+        set -euo pipefail
+        export PATH="$HOME/.cargo/bin:$PATH"
+        cargo install --force yazi-build
       args:
-        # yazi 바이너리가 이미 존재하면 설치를 건너뜁니다.
-        creates: "{{ user_home }}/.cargo/bin/yazi"
+        executable: /bin/bash
 
     # -------------------------------------------------------
     # 9. Nerd Font 설치 (creates 추가) + font cache
@@ -330,7 +348,6 @@
       loop:
         - 'export PATH="$HOME/.atuin/bin:$PATH"'
         - 'eval "$(atuin init bash)"'
-        - 'eval "$(thefuck --alias)"'
         - 'eval "$(zoxide init bash)"'
         - 'eval "$(starship init bash)"'
         - 'alias cd="z"'
