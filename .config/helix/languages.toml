@@ -1,0 +1,52 @@
+# Rust: 저장 시 체크를 clippy로
+[language-server.rust-analyzer.config.check]
+command = "clippy"
+
+[[language]]
+name = "rust"
+
+# Python: ruff를 서버로(예시)
+[[language]]
+name = "python"
+language-servers = ["pyright", "ruff"]
+
+[language-server.ruff]
+command = "ruff"
+args = ["server"]
+
+# TS/JS
+[[language]]
+name = "typescript"
+language-servers = ["typescript-language-server", "vscode-eslint-language-server"]
+
+[[language]]
+name = "javascript"
+language-servers = ["typescript-language-server", "vscode-eslint-language-server"]
+
+# TOML
+[[language]]
+name = "toml"
+formatter = { command = "taplo", args = ["fmt", "-"] }
+auto-format = true
+
+# XML
+[[language]]
+name = "xml"
+auto-format = true
+formatter = { command = "xmllint", args = ["--format", "-"] }
+language-servers = ["xml"]
+
+[language-server.xml]
+command = "lemminx-linux"  # 환경에 맞게
+
+[[language]]
+name = "markdown"
+language-servers = ["marksman", "markdown-oxide"]
+
+[language-server.kotlin-lsp]
+command = "kotlin-lsp"
+args = ["--stdio"]
+
+[[language]]
+name = "kotlin"
+language-servers = ["kotlin-lsp"]

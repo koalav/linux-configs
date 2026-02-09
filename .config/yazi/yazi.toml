@@ -1,0 +1,8 @@
+# ~/.config/yazi/yazi.toml
+
+[opener]
+# Zellij의 edit 액션을 사용하여 파일을 여는 설정
+edit = [
+    { run = 'zellij edit --floating "$@"', block = false, desc = "Zellij Edit" }
+]
+

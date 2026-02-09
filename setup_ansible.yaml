@@ -47,7 +47,6 @@
           - unzip
           - tar
           - build-essential
-          #          - software-properties-common
           - taskwarrior
           - shellcheck
           - asciinema
@@ -64,6 +63,10 @@
           - poppler-utils
           - fontconfig
           - direnv
+          - gpg
+          - imagemagick
+          - ffmpeg
+          - mediainfo
         state: present
         update_cache: yes
     # -------------------------------------------------------
@@ -94,11 +97,11 @@
         content: |
           deb [signed-by=/etc/apt/keyrings/charm.gpg] https://repo.charm.sh/apt/ * *
 
-    #- name: Install glow
-    #  ansible.builtin.apt:
-    #    name: glow
-    #    state: present
-    #    update_cache: yes
+    - name: Install glow
+      ansible.builtin.apt:
+        name: glow
+        state: present
+        update_cache: yes
 
     # -------------------------------------------------------
     # 2. Rust (Cargo)
@@ -177,7 +180,7 @@
     - name: Download and Install Zellij
       tags: [zellij]
       unarchive:
-        src: "https://github.com/zellij-org/zellij/releases/download/v{{ zellij_ver }}/zellij-{{ neovim_arch }}-unknown-linux-musl.tar.gz"
+        src: "https://github.com/zellij-org/zellij/releases/download/v{{ zellij_ver }}/zellij-{ neovim_arch }-unknown-linux-musl.tar.gz"
         dest: /usr/local/bin
         remote_src: yes
         mode: "0755"
@@ -332,7 +335,127 @@
       changed_when: false
 
     # -------------------------------------------------------
-    # 10. .bashrc 설정 (cd alias는 중복 없이 1회만)
+    # Helix 설치 (Debian/Ubuntu) - aarch64: 소스에서 .deb 빌드 후 dpkg 설치
+    #  1) deb 패키지 빌드 유틸 설치
+    #  2) helix git clone
+    #  3) cargo-deb 설치
+    #  4) cargo deb -- --locked
+    #  5) target/debian/*.deb dpkg 설치
+    # -------------------------------------------------------
+
+    - name: Install build utilities for Helix Debian package (Debian/Ubuntu)
+      ansible.builtin.apt:
+        name:
+          - git
+          - curl
+          - ca-certificates
+          - build-essential
+          - pkg-config
+          - libssl-dev
+          - dpkg
+        state: present
+        update_cache: yes
+      become: true
+
+    # rust/cargo가 없으면 설치가 필요합니다. (이미 있다면 이 블록은 생략 가능)
+    - name: Ensure Rust toolchain is installed (rustup)
+      ansible.builtin.shell: |
+        set -euo pipefail
+        if ! command -v cargo >/dev/null 2>&1; then
+          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+        fi
+      args:
+        creates: "{{ ansible_env.HOME }}/.cargo/bin/cargo"
+
+    - name: Ensure Rust toolchain is in PATH for subsequent tasks
+      ansible.builtin.set_fact:
+        helix_rust_env:
+          PATH: "{{ ansible_env.HOME }}/.cargo/bin:{{ ansible_env.PATH }}"
+
+    - name: Clone Helix source
+      ansible.builtin.git:
+        repo: "https://github.com/helix-editor/helix.git"
+        dest: "{{ ansible_env.HOME }}/src/helix"
+        version: "master"
+        update: yes
+
+    - name: Install cargo-deb
+      ansible.builtin.command:
+        cmd: "cargo install cargo-deb"
+        creates: "{{ ansible_env.HOME }}/.cargo/bin/cargo-deb"
+      environment: "{{ helix_rust_env }}"
+
+    - name: Build Helix Debian package (cargo deb -- --locked)
+      ansible.builtin.command:
+        cmd: "cargo deb -- --locked"
+      args:
+        chdir: "{{ ansible_env.HOME }}/src/helix"
+        creates: "{{ ansible_env.HOME }}/src/helix/target/debian"
+      environment: "{{ helix_rust_env }}"
+
+    - name: Find built Helix .deb in target/debian
+      ansible.builtin.find:
+        paths: "{{ ansible_env.HOME }}/src/helix/target/debian"
+        patterns: "*.deb"
+        file_type: file
+      register: helix_debs
+
+    - name: Fail if Helix .deb not found
+      ansible.builtin.fail:
+        msg: "Helix .deb not found in target/debian. Build may have failed."
+      when: helix_debs.matched | int == 0
+
+    - name: Install Helix .deb via dpkg
+      ansible.builtin.apt:
+        deb: "{{ (helix_debs.files | sort(attribute='mtime') | last).path }}"
+        state: present
+      become: true
+
+    # dpkg 설치 후 의존성 깨짐이 있으면 자동 복구
+    - name: Fix missing dependencies after dpkg install (apt -f install)
+      ansible.builtin.apt:
+        update_cache: yes
+        fix_broken: yes
+        state: present
+      become: true
+
+      # -------------------------------------------------------
+    # (선택) MarkItDown 설치 (uv venv + uv pip)
+    #  - uv가 이미 설치돼 있다는 전제입니다.
+    #  - 필요하면 uv 설치 task를 별도로 추가하세요.
+    # -------------------------------------------------------
+    - name: Create MarkItDown venv with uv (python=3.12)
+      ansible.builtin.command:
+        cmd: "uv venv --python=3.12 {{ markitdown_uv_venv_path }}"
+        creates: "{{ markitdown_uv_venv_path }}/bin/activate"
+      vars:
+        markitdown_uv_venv_path: "{{ ansible_env.HOME }}/.venvs/markitdown-uv"
+
+    - name: Install MarkItDown using uv pip
+      ansible.builtin.command:
+        cmd: "uv pip install 'markitdown[all]'"
+      args:
+        chdir: "{{ markitdown_uv_venv_path }}"
+      environment:
+        VIRTUAL_ENV: "{{ markitdown_uv_venv_path }}"
+        PATH: "{{ markitdown_uv_venv_path }}/bin:{{ ansible_env.PATH }}"
+      vars:
+        markitdown_uv_venv_path: "{{ ansible_env.HOME }}/.venvs/markitdown-uv"
+
+    # -------------------------------------------------------
+    # mods 설치 (Charm APT repo 사용)
+    #  - glow와 같은 repo를 쓰므로, 이미 repo 추가 task가 있음
+    #
+    # -------------------------------------------------------
+    - name: Install mods
+      ansible.builtin.apt:
+        name: mods
+        state: present
+        update_cache: yes
+      become: true
+
+    # -------------------------------------------------------
+    # ff. .bashrc 설정 (cd alias는 중복 없이 1회만)
     # -------------------------------------------------------
     - name: Add direnv hook to .bashrc
       lineinfile:
@@ -346,6 +469,8 @@
         line: "{{ item }}"
         state: present
       loop:
+        - "export EDITOR=nvim"
+        - "export VISUAL=nvim"
         - 'export PATH="$HOME/.atuin/bin:$PATH"'
         - 'eval "$(atuin init bash)"'
         - 'eval "$(zoxide init bash)"'
