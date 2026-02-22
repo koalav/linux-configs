@@ -1,4 +1,4 @@
-{ config, pkgs, ... }:
+{ config, pkgs, lib, ... }:
 
 
 {
@@ -73,6 +73,13 @@
     source = "${pkgs.timewarrior}/share/doc/timew/ext/on-modify.timewarrior";
     executable = true;
   };
+
+  # syncthing service 정의 
+  services.syncthing.enable = true;
+
+  # HM 모듈의 기본 ExecStart(-no-browser...)를 Syncthing 2.x 방식으로 강제 교체
+  systemd.user.services.syncthing.Service.ExecStart = lib.mkForce
+    "${pkgs.syncthing}/bin/syncthing --no-browser --no-restart --logflags=0";
 
   # podman
   # 1. Podman 서비스 정의
@@ -266,8 +273,4 @@ except Exception as e:
   # Let Home Manager Install and manage itself.
   programs.home-manager.enable = true;
 }
-
-
-
-
 

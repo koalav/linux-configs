@@ -1,0 +1,31 @@
+
+# ~/.config/yazi/keymap.toml
+# keymap.toml
+
+[mgr]
+# [Tip] Smart enter: open files or enter directories all in one key
+# (Yazi 기본 동작이 이미 'l'키로 이 기능을 수행하지만, Enter 키에도 매핑)
+prepend_keymap = [
+    # [Tip] Dropping to the shell (Ctrl+z로 쉘로 나갔다 돌아오기)
+    { on = "<C-z>", run = "shell '$SHELL' --block --confirm", desc = "Drop to the shell" },
+
+    {on = [ "g", "r" ], run = 'shell -- ya emit cd "$(git rev-parse --show-toplevel)"', desc = "Cd to git root" },
+    # [Tip] Drag and drop via dragon (Ctrl+d로 드래그 앤 드롭 실행)
+    # { on = "<C-d>", run = "shell 'dragon -x -i -T \"$1\"' --confirm", desc = "Drag and drop with dragon" },
+    {on   = "!", for  = "unix", run  = 'shell "$SHELL" --block', desc = "Open $SHELL here" },
+    # [Tip] Linux: Copy selected files to system clipboard (xclip 예시)
+    # Wayland 사용 시 'wl-copy'로 변경하세요.
+    # { on = "y", run = [ "yank", "shell 'echo \"$@\" | xclip -i -selection clipboard -t text/uri-list' --confirm" ], desc = "Yank and copy to system clipboard" },
+
+    # [Tip] cd back to the root of the current Git repository ('gr' 입력)
+
+    # [Tip] Maximize / Hide preview pane (Lua 함수 호출)
+    # T 키를 누르면: 일반 -> 미리보기 숨김 -> 미리보기 최대화 순환
+    { on = "T", run = "plugin toggle-pane max-preview", desc = "Toggle preview pane layout" },
+]
+
+[input]
+#prepend_keymap = [
+    # [Tip] Close input by once Esc press (기본값은 입력 모드 -> 일반 모드인데, 아예 닫아버림)
+#    { on = "<Esc>", run = "close", desc = "Close input" }
+#]

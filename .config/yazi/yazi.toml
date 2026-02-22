@@ -1,8 +1,22 @@
 # ~/.config/yazi/yazi.toml
 
-[opener]
-# Zellij의 edit 액션을 사용하여 파일을 여는 설정
-edit = [
-    { run = 'zellij edit --floating "$@"', block = false, desc = "Zellij Edit" }
-]
+[mgr]
+# [요청사항] Default mtime 설정 (수정된 시간 순 정렬)
+linemode = "mtime"
+show_symlink = true
 
+[preview]
+tab_size = 2
+
+
+[opener]
+# [Tip] Drag and drop via dragon
+# dragon = [
+#     { run = 'dragon -x -i -T "$1"', orphan = true, for = "linux" },
+#     { run = 'dragon -x -i -T "$1"', orphan = true, for = "macos" },
+# ]
+
+[open]
+# dragon을 특정 키로 실행하기 위해 prepend rules에 추가하지 않고
+# keymap에서 직접 호출하도록 설정하는 것이 일반적이나,
+# 기본 실행 방식에 추가하고 싶다면 여기에 규칙을 추가할 수 있습니다.

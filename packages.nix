@@ -2,10 +2,14 @@
 
 
 with pkgs; [
+  syncthing
   ddgr
   fabric-ai
   yt-dlp
-  podman podman-docker podman-compose podman-tui
+  podman podman-compose podman-tui
+  gocryptfs 
+
+  vdirsyncer khal
 
   # --- 기본 ---
   taskwarrior3
@@ -84,6 +88,10 @@ with pkgs; [
   httpx
   sqlmap
   termshark
+  #wireshark
+  ngrep
+  iftop
+  bmon
   rustscan
 
   # --- Helix LSP Servers ---
@@ -127,4 +135,6 @@ with pkgs; [
   # hm-addpkg가 여기에 자동으로 추가함
   # --- AUTO-ADD END ---
 ]
+
+
 
