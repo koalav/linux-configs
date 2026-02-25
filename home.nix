@@ -123,6 +123,7 @@
       ll = "eza -alh --icons --group-directories-first --git";
       lt = "eza --tree --level=2 --icons";
       hmconfig = "hx $HOME/.config/home-manager/home.nix";
+      hms = "home-manager switch --flake $HOME/.config/home-manager#sangjin";
     };
 
     functions = {
