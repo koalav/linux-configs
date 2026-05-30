@@ -36,7 +36,7 @@ with pkgs; [
   zellij
 
   # Dev base
-  uv httpie mitmproxy nodejs tree-sitter
+  uv httpie mitmproxy tree-sitter
   helix
 
   # GitHub / Python quality
@@ -65,11 +65,6 @@ with pkgs; [
   kotlin kotlin-language-server
   jdt-language-server
 
-
-  python312
-  python312Packages.pip
-  python312Packages.virtualenv
-  pipx
 
   # LangChain 작업 보조(로컬 개발/테스트)
   sqlite
